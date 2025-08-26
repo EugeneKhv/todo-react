@@ -1,0 +1,54 @@
+/* index.css — базовые стили для старта */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.5;
+  background: #f9f9f9; /* светлый фон */
+  color: #333;         /* тёмный текст */
+}
+
+#root {
+  margin: 0;
+  padding: 1rem;
+  text-align: left;    /* всё выравниваем влево */
+}
+
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+.profile-form {
+  margin: 5px;
+  padding: 8px;
+  border: 1px solid #ccc;
+}
+
+.profile-form input {
+  display: block;
+  margin: 6px 0;
+  padding: 6px;
+}
+
+
+li button {
+  margin-left: 10px;
+  color: red;
+}
+
+.controls button {
+  margin: 10px;
+}
+
+.done { text-decoration: line-through; opacity: 0.6; }
+li { margin: 4px 0; }
+.controls button { margin-right: 8px; }
