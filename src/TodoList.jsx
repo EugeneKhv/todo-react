@@ -1,81 +1,122 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import TodoItem from './TodoItem';
 
+// PascalCase для компонента
 function TodoList() {
-    const [tasks, setTasks] = useState([]);
-    const [text, setText] = useState('');
+    // camelCase для переменных/функций
+    const [tasks, setTasks] = useState([]);      // список задач: [{ id, text, done }]
+    const [text, setText] = useState('');        // значение текстового поля
+    const [filter, setFilter] = useState('all'); // 'all' | 'active' | 'done'
 
+    // Загрузка задач при первом рендере (persist в localStorage)
+    useEffect(() => {
+        const raw = localStorage.getItem('tasks');
+        if (raw) setTasks(JSON.parse(raw));
+    }, []);
 
+    // Сохранение задач при каждом изменении
+    useEffect(() => {
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+    }, [tasks]);
 
-    return (<>
-        <div>
-            <h1>Заголовок</h1>
-            <label>
+    // Отфильтрованный список для отображения
+    const visibleTasks =
+        filter === 'active' ? tasks.filter(task => !task.done)
+            : filter === 'done' ? tasks.filter(task => task.done)
+                : tasks;
+
+    // Добавить задачу
+    const addTask = () => {
+        const trimmed = text.trim();
+        if (!trimmed) return; // пустые не добавляем
+        const newTask = { id: Date.now(), text: trimmed, done: false };
+        setTasks(prevTasks => [...prevTasks, newTask]); // иммутабельно
+        setText(''); // очистить поле
+    };
+
+    // Переключить done у задачи по id
+    const toggleDone = (id) => {
+        setTasks(prevTasks =>
+            prevTasks.map(task =>
+                task.id === id ? { ...task, done: !task.done } : task
+            )
+        );
+    };
+
+    // Удалить одну задачу по id
+    const removeTask = (id) => {
+        setTasks(prevTasks => prevTasks.filter(task => task.id !== id));
+    };
+
+    // Удалить все выполненные
+    const removeCompleted = () => {
+        setTasks(prevTasks => prevTasks.filter(task => !task.done));
+    };
+
+    // Перевернуть порядок задач
+    const reverseOrder = () => {
+        setTasks(prevTasks => [...prevTasks].reverse());
+    };
+
+    // Сортировать A→Я по тексту (учёт русской локали)
+    const sortAZ = () => {
+        setTasks(prevTasks =>
+            [...prevTasks].sort((a, b) => a.text.localeCompare(b.text, 'ru'))
+        );
+    };
+
+    return (
+        <div className="todo">
+            <h1>Список дел</h1>
+
+            {/* Ввод новой задачи */}
+            <div className="row">
                 <input
-                    type="text" value={text}
+                    autoFocus
+                    type="text"
                     placeholder="Введите задание"
-                    onChange={e => {
-                        setText(e.target.value);
-                        console.log("Текущее значение:", e.target.value);
-                    }}
+                    value={text}
+                    onChange={e => setText(e.target.value)}               // держим state синхронным с input
+                    onKeyDown={e => { if (e.key === 'Enter' && text.trim()) addTask(); }}
                 />
-            </label>
-        </div>
+                <button onClick={addTask} disabled={!text.trim()}>
+                    Добавить
+                </button>
+            </div>
 
+            {/* Фильтры и массовые действия */}
+            <div className="controls" style={{ marginTop: 8 }}>
+                <div className="filters" style={{ marginBottom: 8 }}>
+                    <button className={filter === 'all' ? 'btn active' : 'btn'} onClick={() => setFilter('all')}>Все</button>
+                    <button className={filter === 'active' ? 'btn active' : 'btn'} onClick={() => setFilter('active')}>Активные</button>
+                    <button className={filter === 'done' ? 'btn active' : 'btn'} onClick={() => setFilter('done')}>Выполненные</button>
+                </div>
 
-        <div>
-            <button
-                disabled={!text.trim()}
-                onClick={() => {
-                    const trimmed = text.trim();
-                    const newTask = { id: Date.now(), text: trimmed, done: false };
-                    setTasks(prev => [...prev, newTask]);
-                    setText('');
-                    console.log("Добавлено:", newTask);
-                }}
-            >
-                Добавить
-            </button>
-        </div>
-        <div><p>Всего задач: {tasks.length}</p>
-            <ul>
-                {tasks.map(task => (
-                    <li key={task.id}>
+                <div className="bulk">
+                    <button onClick={reverseOrder}>Перевернуть порядок</button>
+                    <button onClick={sortAZ}>Сортировать A→Я</button>
+                    <button onClick={removeCompleted}>Удалить выполненные</button>
+                </div>
+            </div>
 
-                        <input type="checkbox" id={`task-${task.id}`} checked={task.done}
-                            onChange={() =>
-                                setTasks(prev =>
-                                    prev.map(t => t.id === task.id ? { ...t, done: !t.done } : t)
-                                )
-                            } /><span className={task.done ? 'done' : ''}>
-                            {task.text}
-                        </span>
+            {/* Счётчики */}
+            <p style={{ marginTop: 8 }}>
+                Всего: {tasks.length} • Активных: {tasks.filter(task => !task.done).length}
+            </p>
 
-                        <button onClick={() => setTasks(prev => prev.filter(t => t.id !== task.id))}>
-                            Удалить
-                        </button>
-                    </li>
+            {/* Рендерим отфильтрованный список */}
+            <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+                {visibleTasks.map(task => (
+                    <TodoItem
+                        key={task.id}           // key только здесь (в месте map)
+                        task={task}             // данные задачи
+                        toggleDone={toggleDone} // действия — вниз через props
+                        removeTask={removeTask}
+                    />
                 ))}
             </ul>
         </div>
-        <div className="controls">
-            <button onClick={() => setTasks(prev => [...prev].reverse())}>
-                Перевернуть порядок
-            </button>
-            <button
-                onClick={() => {
-                    setTasks(prev => [...prev].sort((a, b) => a.text.localeCompare(b.text, 'ru')));
-                    console.log('Отсортировано A→Я');
-                }}
-            >
-                Сортировать A→Я
-            </button>
-        </div>
-        <p><button onClick={() => setTasks(prev => prev.filter(t => !t.done))}>
-            Удалить выполненные
-        </button>
-        </p>
-
-    </>
-    )
+    );
 }
+
 export default TodoList;
