@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import TodoItem from './TodoItem';
 
 // PascalCase для компонента
@@ -9,14 +9,30 @@ function TodoList() {
     const [filter, setFilter] = useState('all'); // 'all' | 'active' | 'done'
 
     // Загрузка задач при первом рендере (persist в localStorage)
+    // 👇 ref, который переживает рендеры и изначально false
+    const didMount = useRef(false);
+    // читаем из localStorage один раз
     useEffect(() => {
-        const raw = localStorage.getItem('tasks');
-        if (raw) setTasks(JSON.parse(raw));
+        try {
+            const raw = localStorage.getItem('tasks');
+            if (raw) setTasks(JSON.parse(raw));
+        } catch (e) {
+            console.warn('Bad tasks in localStorage, clearing.', e);
+            localStorage.removeItem('tasks');
+        }
     }, []);
 
-    // Сохранение задач при каждом изменении
+    // сохраняем, но пропускаем первый вызов
     useEffect(() => {
-        localStorage.setItem('tasks', JSON.stringify(tasks));
+        if (!didMount.current) {
+            didMount.current = true;
+            return;
+        }
+        try {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        } catch (e) {
+            console.warn('Failed to save tasks', e);
+        }
     }, [tasks]);
 
     // Отфильтрованный список для отображения
@@ -39,6 +55,17 @@ function TodoList() {
         setTasks(prevTasks =>
             prevTasks.map(task =>
                 task.id === id ? { ...task, done: !task.done } : task
+            )
+        );
+    };
+    //Переименовать задачу
+    // Переименовать задачу по id
+    const renameTask = (id, newText) => {
+        const trimmed = String(newText).trim();
+        if (!trimmed) return; // пустые имена не сохраняем
+        setTasks(prevTasks =>
+            prevTasks.map(task =>
+                task.id === id ? { ...task, text: trimmed } : task
             )
         );
     };
@@ -112,6 +139,7 @@ function TodoList() {
                         task={task}             // данные задачи
                         toggleDone={toggleDone} // действия — вниз через props
                         removeTask={removeTask}
+                        renameTask={renameTask}
                     />
                 ))}
             </ul>
